@@ -96,7 +96,7 @@ poolSearchQuery = """
 """
 
 poolSearchQueryMultiNetwork = """
-query ($arr: [String!], $network:EthereumNetwork, $exchangeName: [String!]) {
+query ($arr: [String!], $network: Network, $exchangeName: [String!]) {
   ethereum(network: $network) {
     dexTrades(
       options: {limit: 25, desc: "count"}
@@ -240,6 +240,90 @@ query($base:String, $quote:String, $pair:String, $balance:[String!], $since:ISO8
 
 """
 
+
+metaDataQueryWithNetwork = """
+
+query($base:String, $quote:String, $pair:String, $balance:[String!], $since:ISO8601DateTime, $network: Network){
+  ethereum(network: $network) {
+    details: address(address: {is: $quote}) {
+      address
+      smartContract {
+        attributes {
+          name
+          value
+        }
+        currency {
+          symbol
+          name
+          decimals
+          tokenType
+        }
+      }
+    }
+    dailyVolume: dexTrades(
+      baseCurrency: {is: $base}
+      quoteCurrency: {is: $quote}
+      exchangeName: {in: ["Pancake", "Pancake v2"]}
+      time: {since: $since}
+    ) {
+      timeInterval {
+        day(count: 1)
+      }
+      tradeAmount(in: USD)
+      quotePrice
+    }
+		liquidity: address(address: {is: $pair}) {
+      address
+      balances(currency: {in: $balance}) {
+        currency {
+          symbol
+          address
+        }
+        value
+      }
+    }
+    trades:dexTrades(
+      options: {limit: 500, desc: ["block.timestamp.time"]}
+      exchangeName: {in: ["Pancake", "Pancake v2"]}
+      baseCurrency: {is: $base}
+      quoteCurrency: {is: $quote}
+      date: {since: "2021-08-08"}
+    ) {
+      block {
+        height
+        timestamp {
+          time(format: "%Y-%m-%d %H:%M:%S")
+        }
+      }
+      buyAmount
+      buyCurrency {
+        address
+        symbol
+      }
+      sellAmount
+      sellCurrency {
+        address
+        symbol
+      }
+      transaction {
+        hash
+      }
+      side
+      taker {
+        address
+      }
+      maker{
+        address
+      }
+      tradeAmount(in: USD)
+      price
+    }
+  }
+}
+
+
+"""
+
 ohlcQuery = """
 
 query($base:String,$quote:String,$time:Int,$since:ISO8601DateTime, $till:ISO8601DateTime){
@@ -267,7 +351,7 @@ query($base:String,$quote:String,$time:Int,$since:ISO8601DateTime, $till:ISO8601
 
 ohlcQueryWithNetwork = """
 
-query($base:String,$quote:String,$time:Int,$since:ISO8601DateTime, $till:ISO8601DateTime, $network: EthereumNetwork){
+query($base:String,$quote:String,$time:Int,$since:ISO8601DateTime, $till:ISO8601DateTime, $network: Network){
   ethereum(network: $network) {
     dexTrades(
       options: {asc: "timeInterval.minute"}

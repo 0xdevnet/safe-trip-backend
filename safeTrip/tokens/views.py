@@ -77,7 +77,7 @@ def searchTokenWithNetwork(request, network):
     res = res.json()
     addresses = []
     for i in res['data']['search']:
-        addresses.append(i['subject']['address'])	
+        addresses.append(i['subject']['address'])
 
     result = controllers.queryAddressesForPairsWithNetwork(addresses, network)
     if result.status_code != 200:
@@ -137,13 +137,16 @@ def searchTokenWithNetwork(request, network):
 
     # could get really risky!
     try:
-					if len(objs) != 0:
-						if network == 'bsc':
-								PancakeTokens.objects.bulk_create(objs, len(objs), ignore_conflicts=True)
-						elif network == 'ethereum':
-								UniswapTokens.objects.bulk_create(objs, len(objs), ignore_conflicts=True)
-						else:
-								MaticTokens.objects.bulk_create(objs, len(objs), ignore_conflicts=True)
+        if len(objs) != 0:
+            if network == 'bsc':
+                PancakeTokens.objects.bulk_create(
+                    objs, len(objs), ignore_conflicts=True)
+            elif network == 'ethereum':
+                UniswapTokens.objects.bulk_create(
+                    objs, len(objs), ignore_conflicts=True)
+            else:
+                MaticTokens.objects.bulk_create(
+                    objs, len(objs), ignore_conflicts=True)
     except:
         print("Creation of objects from search results has failed!")
         pass
@@ -167,25 +170,25 @@ def getTrendingTokens(request):
 
 
 def getTrendingTokensWithNetwork(request, network):
-	payload = []
+    payload = []
 
-	if network == 'bsc':
-		topTokens = PancakeTokens.objects.all().order_by('-views')[:10]
-	elif network == 'ethereum':
-		topTokens = UniswapTokens.objects.all().order_by('-views')[:10]
-	else:
-		topTokens = MaticTokens.objects.all().order_by('-views')[:10]
-	
-	for token in topTokens:
-		res = {}
-		res["pair_address"] = token.pair_address
-		res["pair_base_name"] = token.pair_base_name
-		res["pair_quote_name"] = token.pair_quote_name
-		res["views"] = token.views
-		
-		payload.append(res)
-		
-	return HttpResponse(json.dumps(payload), content_type="application/json")
+    if network == 'bsc':
+        topTokens = PancakeTokens.objects.all().order_by('-views')[:10]
+    elif network == 'ethereum':
+        topTokens = UniswapTokens.objects.all().order_by('-views')[:10]
+    else:
+        topTokens = MaticTokens.objects.all().order_by('-views')[:10]
+
+    for token in topTokens:
+        res = {}
+        res["pair_address"] = token.pair_address
+        res["pair_base_name"] = token.pair_base_name
+        res["pair_quote_name"] = token.pair_quote_name
+        res["views"] = token.views
+
+        payload.append(res)
+
+    return HttpResponse(json.dumps(payload), content_type="application/json")
 
 
 def getSponsoredTokens(request):
@@ -205,24 +208,24 @@ def getSponsoredTokens(request):
 
 
 def getSponsoredTokensWithNetwork(request, network):
-	payload = []
+    payload = []
 
-	if network == 'bsc':
-		topTokens = PancakeTokens.objects.filter(is_sponsored=True)
-	elif network == 'ethereum':
-		topTokens = UniswapTokens.objects.filter(is_sponsored=True)
-	else:
-		topTokens = MaticTokens.objects.filter(is_sponsored=True)
-	
-	for token in topTokens:
-		res = {}
-		res["pair_address"] = token.pair_address
-		res["pair_base_name"] = token.pair_base_name
-		res["pair_quote_name"] = token.pair_quote_name
-		res["details"] = token.sponsored_details
-		payload.append(res)
-	
-	return HttpResponse(json.dumps(payload), content_type="application/json")
+    if network == 'bsc':
+        topTokens = PancakeTokens.objects.filter(is_sponsored=True)
+    elif network == 'ethereum':
+        topTokens = UniswapTokens.objects.filter(is_sponsored=True)
+    else:
+        topTokens = MaticTokens.objects.filter(is_sponsored=True)
+
+    for token in topTokens:
+        res = {}
+        res["pair_address"] = token.pair_address
+        res["pair_base_name"] = token.pair_base_name
+        res["pair_quote_name"] = token.pair_quote_name
+        res["details"] = token.sponsored_details
+        payload.append(res)
+
+    return HttpResponse(json.dumps(payload), content_type="application/json")
 
 
 # main call when requesting for pool address
@@ -322,8 +325,14 @@ def getTokenMetaDataWithNetwork(request, network, poolAddress):
             "error": "Address Requested Must Start with 0x"
         }
         return HttpResponse(json.dumps(payload), content_type="application/json")
+        
+    if network == "bsc":
+        token = PancakeTokens.objects.filter(pk=poolAddress)
+    elif network == "ethereum":
+        token = UniswapTokens.objects.filter(pk=poolAddress)
+    else:
+        token = MaticTokens.objects.filter(pk=poolAddress)
 
-    token = Tokens.objects.filter(pk=poolAddress)
     if len(token) != 0:
         token[0].views = token[0].views + 1
         token[0].save()
@@ -358,7 +367,24 @@ def getTokenMetaDataWithNetwork(request, network, poolAddress):
 
         quotes = ["BUSD", "WBNB", "USDT"]
         if(result[0]['baseCurrency']['symbol'] in quotes):
-            token = Tokens(
+            if network == "bsc":
+                    token = PancakeTokens(
+                pair_address=result[0]['smartContract']['address']['address'],
+                pair_base_name=result[0]['quoteCurrency']['symbol'],
+                pair_quote_name=result[0]['baseCurrency']['symbol'],
+                pair_base_address=result[0]['quoteCurrency']['address'],
+                pair_quote_address=result[0]['baseCurrency']['address'],
+            )
+            elif network == "ethereum":
+                    token = UniswapTokens(
+                pair_address=result[0]['smartContract']['address']['address'],
+                pair_base_name=result[0]['quoteCurrency']['symbol'],
+                pair_quote_name=result[0]['baseCurrency']['symbol'],
+                pair_base_address=result[0]['quoteCurrency']['address'],
+                pair_quote_address=result[0]['baseCurrency']['address'],
+            )
+            else:
+                    token = MaticTokens(
                 pair_address=result[0]['smartContract']['address']['address'],
                 pair_base_name=result[0]['quoteCurrency']['symbol'],
                 pair_quote_name=result[0]['baseCurrency']['symbol'],
@@ -366,13 +392,31 @@ def getTokenMetaDataWithNetwork(request, network, poolAddress):
                 pair_quote_address=result[0]['baseCurrency']['address'],
             )
         else:
-            token = Tokens(
-                pair_address=result[0]['smartContract']['address']['address'],
-                pair_base_name=result[0]['baseCurrency']['symbol'],
-                pair_quote_name=result[0]['quoteCurrency']['symbol'],
-                pair_base_address=result[0]['baseCurrency']['address'],
-                pair_quote_address=result[0]['quoteCurrency']['address'],
-            )
+            if network == "bsc":
+                token = PancakeTokens(
+                    pair_address=result[0]['smartContract']['address']['address'],
+                    pair_base_name=result[0]['baseCurrency']['symbol'],
+                    pair_quote_name=result[0]['quoteCurrency']['symbol'],
+                    pair_base_address=result[0]['baseCurrency']['address'],
+                    pair_quote_address=result[0]['quoteCurrency']['address'],
+                )
+            elif network == "ethereum":
+                token = UniswapTokens(
+                    pair_address=result[0]['smartContract']['address']['address'],
+                    pair_base_name=result[0]['baseCurrency']['symbol'],
+                    pair_quote_name=result[0]['quoteCurrency']['symbol'],
+                    pair_base_address=result[0]['baseCurrency']['address'],
+                    pair_quote_address=result[0]['quoteCurrency']['address'],
+                )
+            else:
+                token = MaticTokens(
+                    pair_address=result[0]['smartContract']['address']['address'],
+                    pair_base_name=result[0]['baseCurrency']['symbol'],
+                    pair_quote_name=result[0]['quoteCurrency']['symbol'],
+                    pair_base_address=result[0]['baseCurrency']['address'],
+                    pair_quote_address=result[0]['quoteCurrency']['address'],
+                )
+
         token.save()
 
     ar = datetime.datetime.utcnow()
@@ -381,11 +425,12 @@ def getTokenMetaDataWithNetwork(request, network, poolAddress):
     end = datetime.datetime.utcnow()
     print(end)
 
-    result = controllers.getMetaVolumeLQTrades(
+    result = controllers.getMetaVolumeLQTradesWithNetwork(
         token.pair_quote_address,
         token.pair_base_address,
         token.pair_address,
         start.strftime('%Y%m%dT%H%M%S'),
+                network
     )
 
     if result.status_code != 200:
